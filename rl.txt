@@ -1,0 +1,91 @@
+#Part 1: Environment (MarketingCampaignEnv.py)
+import tensorflow as tf
+from tf_agents.environments import tf_py_environment
+
+class MarketingCampaignEnv(tf_py_environment.TFPyEnvironment):
+    def __init__(self, templates, user_data):
+        self._templates = templates  # List of dictionaries containing template features
+        self._user_data = user_data  # Dictionary mapping user IDs to user features
+        self._current_user = None
+        self._selected_template = None
+
+    def _observation_spec(self):
+        # Define observation spec based on user features (e.g., age, engagement level)
+        return tf.TensorSpec.from_tensor_shape(shape=(), dtype=tf.float32)
+
+    def _action_spec(self):
+        # Define action spec as the number of available templates (discrete)
+        return tf.TensorSpec.from_tensor_shape(shape=(), dtype=tf.int32)
+
+    def _reset(self):
+        self._current_user = None
+        self._selected_template = None
+        return tf.constant([0.0])  # Initial observation (can be adjusted)
+
+    def _step(self, action):
+        # Validate action within template range
+        if not 0 <= action < len(self._templates):
+            raise ValueError("Invalid action.")
+
+        self._selected_template = self._templates[action]
+        user_id = list(self._user_data.keys())[0]  # Assuming single user for now
+        user_features = self._user_data[user_id]
+
+        # Simulate user interaction based on template and user features (replace with your logic)
+        reward = 0.0  # Default reward
+        if user_features["engagement_level"] == "High":
+            reward = 1.0  # Higher reward for high engagement
+        if action == 2:  # Example: Reward specific template (discount offer)
+            reward = 2.0
+
+        # Observation can include features from selected template and user interaction
+        observation = tf.concat([
+            tf.expand_dims(tf.constant(reward), axis=0),  # Reward
+            # Add features based on user interaction and selected template (e.g., click-through rate)
+        ], axis=1)
+
+        return observation, reward, True  # True indicates episode termination (can be adjusted)
+
+
+#Part 2: Agent (MarketingCampaignAgent.py)
+from tf_agents.bandits.agents import LinUCB, ThompsonSampling, EpsilonGreedy
+from tf_agents.environments import tf_py_environment
+from tf_agents.agents.stats import AgentMetric
+from tf_agents.metrics import tf_metrics
+
+class MarketingCampaignAgent(object):
+    def __init__(self, env: tf_py_environment.TFPyEnvironment, agent_type="LinUCB", epsilon=0.1):
+        self.env = env
+        self.agent = None
+
+        # Choose agent based on preference
+        if agent_type == "LinUCB":
+            self.agent = LinUCB(
+                time_dependent=False,
+                observation_spec=env._observation_spec(),
+                action_spec=env._action_spec(),
+                reward_shaper=None,
+                optimizer=tf.keras.optimizers.Adam(learning_rate=0.1),
+                dtype=tf.float32,
+                emit_policy_info=()
+            )
+        elif agent_type == "ThompsonSampling":
+            self.agent = ThompsonSampling(
+                time_dependent=False,
+                observation_spec=env._observation_spec(),
+                action_spec=env._action_spec(),
+                dtype=tf.float32
+            )
+        elif agent_type == "EpsilonGreedy":
+            self.agent = EpsilonGreedy(
+                policy=self.agent,  # Can be any policy (e.g., LinUCB)
+                epsilon=epsilon,
+                probability_fn=lambda: tf.random.uniform([], 0.0, 1.0)
+            )
+        else:
+            raise ValueError("Invalid agent type. Choose from LinUCB, ThompsonSampling, or EpsilonGreedy.")
+
+        # Custom metrics (optional)
+        self.average_reward = AgentMetric(tf_metrics.average_reward)
+        self
+

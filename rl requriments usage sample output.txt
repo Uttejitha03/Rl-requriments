@@ -1,0 +1,46 @@
+# Assuming you have defined your templates and user data structures
+
+# Create an environment instance
+env = MarketingCampaignEnv(templates, user_data)
+
+# Choose an agent type (replace with your preference)
+agent_type = "LinUCB"  # Options: LinUCB, ThompsonSampling, EpsilonGreedy
+
+# Create an agent instance
+agent = MarketingCampaignAgent(env, agent_type)
+
+# Simulate an episode
+
+# Reset the environment
+observation = env.reset()
+
+# Get a recommended template from the agent
+action_step = agent.agent.policy.action(observation)
+recommended_template_index = action_step.action.numpy()
+
+# Use recommended_template_index to select the corresponding template
+recommended_template = env._templates[recommended_template_index]
+
+print(f"Recommended template: {recommended_template['Body']}")
+
+# Simulate sending the recommended template to the user (replace with your logic)
+# ...
+
+# Get user interaction data (reward) based on the sent template (replace with your logic)
+reward = 1.0  # Example: User clicked on the template
+
+# Provide feedback to the agent
+agent.agent.experience.update(observation, action_step, reward)
+
+# Optional: Access custom metrics (if defined)
+average_reward = agent.average_reward.result()
+print(f"Average reward: {average_reward}")
+
+# ... (Continue the episode or start a new one)
+
+sample output:
+Recommended template: Hurry! Complete Your Purchase and Save 20% Today!
+
+[Your logic to send the template to the user]
+
+Average reward: 1.0  # This is an example value, might be different based on your reward function
